@@ -78,6 +78,7 @@ SUBDIRS = m4 \
     network/uwstaticrouting \
     network/uwflooding \
     network/uwsun \
+    network/uwguwmanet \
     network/uwicrp \
     network/uwPositionBasedRouting \
     data_link/uwmll \

@@ -98,6 +98,7 @@ DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/application/uwcbr'
 DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/application/uwvbr'
 DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/application/uwApplication'
 DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/network/uwsun'
+DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/network/uwguwmanet'
 DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/network/uwstaticrouting'
 DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/network/uwflooding'
 DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/network/uwicrp'
@@ -240,6 +241,7 @@ AC_CONFIG_FILES([
     application/uwvbr/Makefile
     application/uwApplication/Makefile
     network/uwsun/Makefile
+    network/uwguwmanet/Makefile
     network/uwstaticrouting/Makefile
     network/uwflooding/Makefile
     network/uwicrp/Makefile

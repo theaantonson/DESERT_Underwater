@@ -62,7 +62,7 @@
 ######################################
 set opt(verbose)            1
 set opt(bash_parameters)    0
-set opt(trace_files)        0
+set opt(trace_files)        1
 
 #####################
 # Library Loading   #
@@ -94,7 +94,7 @@ $ns use-Miracle
 ##################
 set opt(start_clock) [clock seconds]
 
-set opt(nn)                 2.0 ;# Number of Nodes
+set opt(nn)                 10.0 ;# Number of Nodes
 set opt(starttime)          1
 set opt(stoptime)           50000
 set opt(txduration)         [expr $opt(stoptime) - $opt(starttime)]
