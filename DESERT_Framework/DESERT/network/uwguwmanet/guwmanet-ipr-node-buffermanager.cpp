@@ -118,6 +118,9 @@ GuwmanetIPRoutingNode::evaluateBufferAndForward()
     ch->next_hop() = UWIP_BROADCAST; // MAC layer broadcast address
     ch->direction() = hdr_cmn::DOWN;
 
+    std::cout << "[VIZ] " << Scheduler::instance().clock() << " " << ipAddr_ << " FORWARDED " << ch->uid() << std::endl;
+    number_of_pkt_forwarded_++;
+
     if (printDebug_ > 0) {
         std::cout << "[" << NOW << "]::Node[" << printIP(ipAddr_) 
                   << "] EVALUATED BUFFER. Winner is Node: " << winning_neighbor_id 

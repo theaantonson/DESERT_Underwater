@@ -278,8 +278,16 @@ GuwmanetIPRoutingNode::recv(Packet *p)
     // -----------------------------------------------------------
     if (ch->direction() == hdr_cmn::DOWN) {
 		if (type != PT_GUWMANET_ACK) { 
+            std::cout << "[VIZ] " << NOW << " " << ipAddr_ << " SENT " << ch->uid() << std::endl;
             this->initPktDataPacket(p);
             number_of_datapkt_++;
+
+            // enable forwarding 
+            ch->next_hop() = UWIP_BROADCAST; 
+            ch->prev_hop_ = ipAddr_;
+
+            seen_uids_.push_back(ch->uid());
+
             sendDown(p, this->getDelay(period_data_));
             return;
         }
@@ -307,13 +315,22 @@ GuwmanetIPRoutingNode::recv(Packet *p)
     // PACKET GOING UP (From the Ocean to the Application)
     // -----------------------------------------------------------
     if (ch->direction() == hdr_cmn::UP) {
-        
+        for (size_t i = 0; i < seen_uids_.size(); i++) {
+            if (seen_uids_[i] == ch->uid()) {
+                Packet::free(p); 
+                return;
+            }
+        }
+        seen_uids_.push_back(ch->uid());
+
+        std::cout << "[VIZ] " << NOW << " " << ipAddr_ << " HEARD " << ch->uid() << std::endl;
         // === HANDLING ACKS ===
         if (type == PT_GUWMANET_ACK) {
             hdr_guwmanet_ack *hack = HDR_GUWMANET_ACK(p);
             
             if (hack->destination_id_ == ipAddr_) {
                 // The ACK was meant for ME! I reached the destination successfully.
+                std::cout << "[VIZ] " << NOW << " " << ipAddr_ << " IGNORED " << ch->uid() << std::endl;
                 if (printDebug_ > 0) {
                     std::cout << "[" << NOW << "]::Node[" << printIP(ipAddr_) 
                               << "] RECEIVED ACK FOR SN: " << hack->data_sequence_number_ << std::endl;
@@ -342,7 +359,7 @@ GuwmanetIPRoutingNode::recv(Packet *p)
         }
 
         // === HANDLING DATA (GOSSIPING) ===
-        if (type == PT_GUWMANET_DATA) {
+        if (type != PT_GUWMANET_ACK) {
             hdr_guwmanet_data *hdata = HDR_GUWMANET_DATA(p);
 
             // 1. Am I the final destination?

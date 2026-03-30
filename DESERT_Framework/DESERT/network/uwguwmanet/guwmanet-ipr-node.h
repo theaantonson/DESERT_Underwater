@@ -451,6 +451,7 @@ protected:
 	std::vector<BufferedPacket> packet_buffer_; 
     std::map<int, int> temp_routing_table_; 
     std::map<int, int> perm_routing_table_;
+	std::vector<int> seen_uids_;
 	ListenTimer listen_timer_;
 private:
 	/**

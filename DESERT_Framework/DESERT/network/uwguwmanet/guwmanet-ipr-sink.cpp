@@ -158,6 +158,7 @@ GuwmanetIPRoutingSink::recv(Packet *p)
 		ch->size() -= sizeof(hdr_guwmanet_data); 
 		// ch->ptype() = PT_CBR;
 
+		std::cout << "[VIZ] " << NOW << " " << ipAddr_ << " DELIVERED " << ch->uid() << std::endl;
         sendUp(p); // Pass data to Application layer
         return;
     }

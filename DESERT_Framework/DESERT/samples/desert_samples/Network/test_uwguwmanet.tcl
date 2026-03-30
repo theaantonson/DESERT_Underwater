@@ -61,7 +61,7 @@
 # Flags to enable or disable options #
 ######################################
 set opt(verbose)            1
-set opt(bash_parameters)    0
+set opt(bash_parameters)    1
 set opt(trace_files)        1
 
 #####################
@@ -94,6 +94,7 @@ $ns use-Miracle
 # Tcl variables  #
 ##################
 set opt(nn)                 3.0 ;# Number of Nodes
+set opt(topo)               "line"
 set opt(starttime)          1
 set opt(stoptime)           100000
 set opt(txduration)         [expr $opt(stoptime) - $opt(starttime)]
@@ -112,18 +113,24 @@ set opt(txpower)	    130.0
 # Module/UW/GUWMANETNode set metrics_ 1
 
 if {$opt(bash_parameters)} {
-    if {$argc != 3} {
-        puts "The script requires three inputs:"
+    if {$argc != 6} {
+        puts "The script requires 6 inputs:"
         puts "- the first one is the cbr packet size (byte);"
         puts "- the second one is the cbr poisson period (seconds);"
         puts "- the third one is the rngstream;"
-        puts "example: ns uwgmposition.tcl 125 60 13"
+        puts "- 4: number of nodes"
+        puts "- 5: topology (line or random)"
+        puts "- 6: channel quality / Tx Power dB (e.g. 130.0)"
+        puts "example: ns uwgmposition.tcl 125 60 13 line 130.0"
         puts "Please try again."
         return
     } else {
         set opt(pktsize)       [lindex $argv 0]
         set opt(cbr_period)    [lindex $argv 1]
         set opt(rngstream)	   [lindex $argv 2]
+        set opt(nn)            [lindex $argv 3]
+        set opt(topo)          [lindex $argv 4]
+        set opt(txpower)       [lindex $argv 5]
     }
 }
 set opt(buffer_period) [expr $opt(cbr_period) / 3]
@@ -329,21 +336,32 @@ for {set id1 0} {$id1 < $opt(nn)} {incr id1}  {
 }
 
 # Setup positions
-$position(0) setX_ 0
-$position(0) setY_ 0
-$position(0) setZ_ -1000
+set json_file [open "positions.json" w]
+puts $json_file "\{"
 
-$position(1) setX_ 500
-$position(1) setY_ 500
-$position(1) setZ_ -1000
+for {set id 0} {$id < $opt(nn)} {incr id}  {
+    if {$opt(topo) == "line"} {
+        $position($id) setX_ [expr $id * 500.0]
+        $position($id) setY_ 0.0
+        $position($id) setZ_ -1000.0
+    } elseif {$opt(topo) == "random"} {
+        $position($id) setX_ [expr rand() * 2000.0]
+        $position($id) setY_ [expr rand() * 2000.0]
+        $position($id) setZ_ [expr -200.0 - (rand() * 800.0)]
+    }
+    
+    # Save to positions.json
+    puts $json_file "  \"$id\": \[[$position($id) getX_], [$position($id) getY_], [$position($id) getZ_]\],"
+}
 
-$position(2) setX_ 500
-$position(2) setY_ 500
-$position(2) setZ_ 1000
+# XXX TODO: where to place sink?
+$position_sink setX_ 1000.0
+$position_sink setY_ 1000.0
+$position_sink setZ_ 0.0
 
-$position_sink setX_ 1000
-$position_sink setY_ 1000
-$position_sink setZ_ -1000
+puts $json_file "  \"254\": \[[$position_sink getX_], [$position_sink getY_], [$position_sink getZ_]\]"
+puts $json_file "\}"
+close $json_file
 
 for {set id 0} {$id < $opt(nn)} {incr id}  {
     $ipr($id) initialize
