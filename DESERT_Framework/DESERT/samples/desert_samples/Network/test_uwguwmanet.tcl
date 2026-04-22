@@ -107,8 +107,9 @@ set opt(bitrate)            4800.0
 set opt(ack_mode)           "setNoAckMode"
 set opt(pktsize)       125
 set opt(cbr_period)    60
+set opt(node_distance)	    500.0 
 # Parameters used to configure the BPSK module of WOSS
-set opt(txpower)	    130.0 
+set opt(txpower)	    175.0 
 
 # Module/UW/GUWMANETNode set metrics_ 1
 
@@ -119,8 +120,8 @@ if {$opt(bash_parameters)} {
         puts "- the second one is the cbr poisson period (seconds);"
         puts "- the third one is the rngstream;"
         puts "- 4: number of nodes"
-        puts "- 5: topology (line or random)"
-        puts "- 6: channel quality / Tx Power dB (e.g. 130.0)"
+        puts "- 5: topology (line, circle, grid or random)"
+        puts "- 6: node distance (e.g. 1500.0)"
         puts "example: ns uwgmposition.tcl 125 60 13 line 130.0"
         puts "Please try again."
         return
@@ -130,7 +131,7 @@ if {$opt(bash_parameters)} {
         set opt(rngstream)	   [lindex $argv 2]
         set opt(nn)            [lindex $argv 3]
         set opt(topo)          [lindex $argv 4]
-        set opt(txpower)       [lindex $argv 5]
+        set opt(distance)      [lindex $argv 5]
     }
 }
 set opt(buffer_period) [expr $opt(cbr_period) / 3]
@@ -335,33 +336,50 @@ for {set id1 0} {$id1 < $opt(nn)} {incr id1}  {
     $mll_sink addentry [$ipif($id1) addr] [ $mac($id1) addr]
 }
 
-# Setup positions
-set json_file [open "positions.json" w]
-puts $json_file "\{"
+set sinkX 0.0
+set sinkY 0.0
 
 for {set id 0} {$id < $opt(nn)} {incr id}  {
     if {$opt(topo) == "line"} {
-        $position($id) setX_ [expr $id * 500.0]
+        $position($id) setX_ [expr $id * $opt(distance)]
         $position($id) setY_ 0.0
         $position($id) setZ_ -1000.0
+    } elseif {$opt(topo) == "circle"} {
+        set PI 3.1415926535897931
+        set angle [expr 2.0 * $PI * $id / $opt(nn)]
+        set radius [expr $opt(distance) / (2.0 * sin($PI / $opt(nn)))]
+
+        $position($id) setX_ [expr $radius * cos($angle)]
+        $position($id) setY_ [expr $radius * sin($angle)]
+        $position($id) setZ_ -1000.0
+    } elseif {$opt(topo) == "grid"} {
+        set cols [expr int(ceil(sqrt($opt(nn))))]
+        set row [expr $id / $cols]
+        set col [expr $id % $cols]
+        
+        $position($id) setX_ [expr $col * $opt(distance)]
+        $position($id) setY_ [expr $row * $opt(distance)]
+        $position($id) setZ_ -1000.0
     } elseif {$opt(topo) == "random"} {
-        $position($id) setX_ [expr rand() * 2000.0]
-        $position($id) setY_ [expr rand() * 2000.0]
-        $position($id) setZ_ [expr -200.0 - (rand() * 800.0)]
+        set area [expr $opt(distance) * sqrt($opt(nn))]
+        $position($id) setX_ [expr rand() * $area]
+        $position($id) setY_ [expr rand() * $area]
+        $position($id) setZ_ -1000.0
     }
-    
-    # Save to positions.json
-    puts $json_file "  \"$id\": \[[$position($id) getX_], [$position($id) getY_], [$position($id) getZ_]\],"
+
+    # print position to be able to read node positions simulation_runner
+    puts "NODE_POS: $id [$position($id) getX_] [$position($id) getY_] [$position($id) getZ_]"
+
+    if {$id == 0 } {
+        set sinkX [expr [$position($id) getX_] - $opt(distance)]
+    }
 }
 
-# XXX TODO: where to place sink?
-$position_sink setX_ 1000.0
-$position_sink setY_ 1000.0
+$position_sink setX_ $sinkX
+$position_sink setY_ 0.0
 $position_sink setZ_ 0.0
 
-puts $json_file "  \"254\": \[[$position_sink getX_], [$position_sink getY_], [$position_sink getZ_]\]"
-puts $json_file "\}"
-close $json_file
+puts "NODE_POS: 254 [$position_sink getX_] [$position_sink getY_] [$position_sink getZ_]"
 
 for {set id 0} {$id < $opt(nn)} {incr id}  {
     $ipr($id) initialize
@@ -483,14 +501,21 @@ proc finish {} {
         # XXX
         set pdr [expr ((double($sum_cbr_rcv_pkts)/ $sum_cbr_sent_pkts) * 100)]
         puts "Packet Error Rate        : [expr ((1 - double($sum_cbr_rcv_pkts)/ $sum_cbr_sent_pkts) * 100)] %"
+
+        set pdr [expr ((double($sum_cbr_rcv_pkts)/ $sum_cbr_sent_pkts) * 100)]
+        puts "Packet Delivery Ratio    : $pdr %"
     } else {
         puts "Packet Error Rate        : 0 %"
+
+        # XXX TODO Check that this is correct
+        puts "Packet Delivery Ratio    : 100 %"
     }
     # XXX
     set mean_ftt [expr $sum_ftt / $opt(nn)]
     set mean_energy [expr $sum_energy / $opt(nn)]
     puts "Mean End-to-End Delay    : $mean_ftt s"
     puts "Mean Energy per Node     : $mean_energy J"
+    puts "Total Energy used        : $sum_energy J"
 
     puts "Total GUWMANET ACKs      : [expr $ackcountnode + $ackcountsink]"
     puts "Total GUWMANET Data Gen  : $datacount"

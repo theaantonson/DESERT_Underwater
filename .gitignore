@@ -34,3 +34,5 @@ MODEM_log_*
 ***/configure~
 .DS_Store
 build_desert
+DESERT_Framework/DESERT/samples/desert_samples/Network/results
+***/input/*
