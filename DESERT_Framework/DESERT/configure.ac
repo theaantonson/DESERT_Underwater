@@ -95,6 +95,7 @@ DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/physical/uwem_antenna'
 DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/network/uwip'
 DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/transport/uwudp'
 DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/application/uwcbr'
+DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/application/uwguwal'
 DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/application/uwvbr'
 DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/application/uwApplication'
 DESERT_CPPFLAGS="$DESERT_CPPFLAGS "'-I$(top_srcdir)/network/uwsun'
@@ -163,6 +164,7 @@ DESERT_UWOPTICAL_PHY_LIBADD='$(top_builddir)/physical/uwoptical_phy/libuwoptical
 DESERT_UWIP_LIBADD='$(top_builddir)/network/uwip/libuwip.la'
 DESERT_UWUDP_LIBADD='$(top_builddir)/transport/uwudp/libuwudp.la'
 DESERT_UWCBR_LIBADD='$(top_builddir)/application/uwcbr/libuwcbr.la'
+DESERT_UWGUWAL_LIBADD='$(top_builddir)/application/uwguwal/libuwguwal.la'
 DESERT_UWMMAC_CLMSGS_LIBADD='$(top_builddir)/data_link/uwmmac_clmsgs/libuwmmac_clmsgs.la'
 DESERT_UWTDMA_LIBADD='$(top_builddir)/data_link/uwtdma/libuwtdma.la'
 DESERT_UWEM_CHANNEL_LIBADD='$(top_builddir)/channel/uwem_channel/libuwem_channel.la'
@@ -238,6 +240,7 @@ AC_CONFIG_FILES([
     network/uwip/Makefile
     transport/uwudp/Makefile
     application/uwcbr/Makefile
+    application/uwguwal/Makefile
     application/uwvbr/Makefile
     application/uwApplication/Makefile
     network/uwsun/Makefile

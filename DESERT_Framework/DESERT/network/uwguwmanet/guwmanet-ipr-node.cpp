@@ -370,7 +370,8 @@ GuwmanetIPRoutingNode::recv(Packet *p)
                 }
 				Packet *p_copy = p->copy();
                 this->sendBackAck(p_copy); // Automatically generates and sends the ACK
-                sendUp(p); // Pass data to application
+                // sendUp(p); // Pass data to application
+                Packet::free(p);
                 return;
             }
 

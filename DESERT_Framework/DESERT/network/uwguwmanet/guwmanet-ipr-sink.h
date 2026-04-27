@@ -270,6 +270,7 @@ protected:
 	double period_status_;
 	int printDebug_; /**< Flag to enable or disable dirrefent levels of debug.
 					  */
+	std::vector<int> seen_uids_; /**< memory bank of received messages */
 
 	// Statistics
 	static long number_of_ackpkt_; /**< Comulative number of Ack packets

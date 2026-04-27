@@ -148,6 +148,19 @@ GuwmanetIPRoutingSink::recv(Packet *p)
     }
 
     if (ch->direction() == hdr_cmn::UP && type != PT_GUWMANET_ACK) {
+		hdr_uwudp* udph = hdr_uwudp::access(p);
+        int app_seq_no = udph->sport();
+		
+		for (size_t i = 0; i < seen_uids_.size(); i++) {
+            if (seen_uids_[i] == app_seq_no) {
+                Packet *p_copy = p->copy();
+                this->sendBackAck(p_copy);
+                
+                Packet::free(p); 
+                return;
+            }
+        }
+
         if (printDebug_ > 0) {
             std::cout << "[" << NOW << "]::SINK[" << printIP(ipAddr_) 
                       << "] RECEIVED DATA. SENDING ACK." << std::endl;
