@@ -76,13 +76,13 @@ load libuwinterference.so
 load libuwphy_clmsgs.so
 load libuwstats_utilities.so
 load libuwphysical.so
+load libuwmll.so
 load libuwcsmaca.so
 load libuwip.so
-load libuwmll.so
+load libuwstaticrouting.so
 load libuwudp.so
-load libuwguwal.so
+#load libuwguwal.so
 load libuwicrp.so
-load libuwudp.so
 load libuwcbr.so
 
 #############################
@@ -108,10 +108,10 @@ set opt(bw)                 5000.0
 set opt(bitrate)            4800.0
 set opt(ack_mode)           "setNoAckMode"
 set opt(pktsize)       125
-set opt(app_period)    60
+set opt(app_period)    120
 set opt(node_distance)	    500.0 
 # Parameters used to configure the BPSK module of WOSS
-set opt(txpower)	    140.0 
+set opt(txpower)	    170.0 
 
 # Module/UW/GUWMANETNode set metrics_ 1
 
@@ -147,9 +147,9 @@ for {set k 0} {$k < $opt(rngstream)} {incr k} {
 }
 
 if {$opt(trace_files)} {
-    set opt(tracefilename) "./test_uwguwmanet.tr"
+    set opt(tracefilename) "./test_uwzigbee.tr"
     set opt(tracefile) [open $opt(tracefilename) w]
-    set opt(cltracefilename) "./test_uwguwmanet.cltr"
+    set opt(cltracefilename) "./test_uwzigbee.cltr"
     set opt(cltracefile) [open $opt(tracefilename) w]
 } else {
     set opt(tracefilename) "/dev/null"
@@ -168,23 +168,37 @@ $data_mask setBandwidth  $opt(bw)
 # Module Configuration  #
 #########################
 # UW/CBR
-# Module/UW/CBR set packetSize_          $opt(pktsize)
-# Module/UW/CBR set period_              $opt(cbr_period)
-# Module/UW/CBR set PoissonTraffic_      1
+Module/UW/CBR set packetSize_          $opt(pktsize)
+Module/UW/CBR set period_              $opt(app_period)
+Module/UW/CBR set PoissonTraffic_      1
+
+Module/UW/ICRPNode set PoissonTraffic_    1
+Module/UW/ICRPNode set debug_             0    ;# Silence routing spam
+Module/UW/ICRPNode set max_validity_time_ 3600.0
+Module/UW/ICRPNode set timer_route_req_   10.0 ;# Wait 10s for RREP
+Module/UW/ICRPNode set safe_timer_buffer_ 10.0
+
+Module/UW/ICRPSink set PoissonTraffic_    1
+Module/UW/ICRPSink set debug_             0
+Module/UW/ICRPSink set max_validity_time_ 3600.0
+Module/UW/ICRPSink set timer_route_req_   10.0
+Module/UW/ICRPSink set safe_timer_buffer_ 10.0
 
 # CSMA/CA 
-Module/UW/CSMA_CA set listen_time_      0.5  
-Module/UW/CSMA_CA set wait_costant_     0.1
+Module/UW/CSMA_CA set debug_            0      ;# Silence the downLayerSAP_ spam!
+Module/UW/CSMA_CA set listen_time_      7.0    ;# Give acoustic ACKs time to arrive
+Module/UW/CSMA_CA set wait_costant_     0.5
 Module/UW/CSMA_CA set max_tx_tries_     5
-Module/UW/CSMA_CA set ack_mode_         "setAckMode" ; # zigbee uses acks on MAC level
+Module/UW/CSMA_CA set ack_mode_         "setAckMode"
 
-Module/UW/GUWMANETSink set periodPoissonTraffic_	        0.1
-Module/UW/GUWMANETSink set t_probe			            600
-
-# BPSK              
-Module/UW/PHYSICAL  set BitRate_                      $opt(bitrate)
-Module/UW/PHYSICAL  set MaxTxSPL_dB_                  $opt(txpower)
-
+# UW/PHYSICAL (BPSK Modem)              
+Module/UW/PHYSICAL  set BitRate_                  $opt(bitrate)
+Module/UW/PHYSICAL  set MaxTxSPL_dB_              $opt(txpower)
+Module/UW/PHYSICAL  set TxPower_                  10.0 
+Module/UW/PHYSICAL  set RxPower_                  1.0  
+Module/UW/PHYSICAL  set IdlePower_                0.01 
+Module/UW/PHYSICAL  set ConsumedEnergy_           0.0  
+Module/UW/PHYSICAL  set debug_                    0
 ################################
 # Procedure(s) to create nodes #
 ################################
@@ -194,7 +208,7 @@ proc createNode { id } {
     
     set node($id) [$ns create-M_Node $opt(tracefile) $opt(cltracefile)] 
 
-    set app($id)  [new Module/UW/GUWAL] 
+    set app($id)  [new Module/UW/CBR] 
     set udp($id)  [new Module/UW/UDP]
     set ipr($id)  [new Module/UW/ICRPNode]
     set ipif($id) [new Module/UW/IP]
@@ -204,16 +218,16 @@ proc createNode { id } {
 
     $node($id) addModule 7 $app($id)   1  "APP"
     $node($id) addModule 6 $udp($id)   1  "UDP"
-    $node($id) addModule 5 $ipr($id)   1  "IPR"
-    $node($id) addModule 4 $ipif($id)  1  "IPF"   
+    $node($id) addModule 5 $ipif($id)  1  "IPF"   
+    $node($id) addModule 4 $ipr($id)   1  "IPR"
     $node($id) addModule 3 $mll($id)   1  "MLL"
     $node($id) addModule 2 $mac($id)   1  "MAC"
     $node($id) addModule 1 $phy($id)   1  "PHY"
 
     $node($id) setConnection $app($id)   $udp($id)   1
-    $node($id) setConnection $udp($id)   $ipr($id)   1
-    $node($id) setConnection $ipr($id)   $ipif($id)  1
-    $node($id) setConnection $ipif($id)  $mll($id)   1
+    $node($id) setConnection $udp($id)   $ipif($id)  1
+    $node($id) setConnection $ipif($id)  $ipr($id)   1
+    $node($id) setConnection $ipr($id)   $mll($id)   1
     $node($id) setConnection $mll($id)   $mac($id)   1
     $node($id) setConnection $mac($id)   $phy($id)   1
     $node($id) addToChannel  $channel    $phy($id)   1
@@ -222,6 +236,7 @@ proc createNode { id } {
     
     set tmp_ [expr ($id) + 1]
     $ipif($id) addr $tmp_
+    $ipr($id) set ipAddr_ [$ipif($id) addr]
     
     set position($id) [new "Position/BM"]
     $node($id) addPosition $position($id)
@@ -237,6 +252,11 @@ proc createNode { id } {
     $phy($id) setSpectralMask $data_mask
     $phy($id) setInterference $interf_data($id)
     $mac($id) $opt(ack_mode)
+    if { [catch {$mac($id) addr $id} err] } {
+        if { [catch {$mac($id) setMacAddr $id} err] } {
+            catch {$mac($id) set macAddr_ $id}
+        }
+    }
     $mac($id) initialize
 }
 
@@ -248,7 +268,7 @@ proc createSink { } {
     set node_sink [$ns create-M_Node $opt(tracefile) $opt(cltracefile)]
 
     for {set cnt 0} {$cnt < $opt(nn)} {incr cnt} {
-        set app_sink($cnt)  [new Module/UW/GUWAL] 
+        set app_sink($cnt)  [new Module/UW/CBR] 
     }
     set udp_sink       [new Module/UW/UDP]
     set ipr_sink       [new Module/UW/ICRPSink]
@@ -261,27 +281,29 @@ proc createSink { } {
         $node_sink addModule 7 $app_sink($cnt) 0 "APP"
     }
     $node_sink addModule 6 $udp_sink       0 "UDP"
-    $node_sink addModule 5 $ipr_sink       0 "IPR"
-    $node_sink addModule 4 $ipif_sink      0 "IPF"   
+    $node_sink addModule 5 $ipif_sink      0 "IPF"
+    $node_sink addModule 4 $ipr_sink       0 "IPR"
     $node_sink addModule 3 $mll_sink       0 "MLL"
     $node_sink addModule 2 $mac_sink       0 "MAC"
     $node_sink addModule 1 $phy_data_sink  0 "PHY"
 
+    # SINK CONNECTIONS (UDP -> IPF -> IPR -> MLL)
     for { set cnt 0} {$cnt < $opt(nn)} {incr cnt} {
         $node_sink setConnection $app_sink($cnt)  $udp_sink 1   
     }
-    $node_sink setConnection $udp_sink  $ipr_sink           1
-    $node_sink setConnection $ipr_sink  $ipif_sink          1
-    $node_sink setConnection $ipif_sink $mll_sink           1 
+    $node_sink setConnection $udp_sink  $ipif_sink          1
+    $node_sink setConnection $ipif_sink $ipr_sink           1
+    $node_sink setConnection $ipr_sink  $mll_sink           1
     $node_sink setConnection $mll_sink  $mac_sink           1
     $node_sink setConnection $mac_sink  $phy_data_sink      1
     $node_sink addToChannel  $channel   $phy_data_sink      1
-
+    
     for { set cnt 0} {$cnt < $opt(nn)} {incr cnt} {
         set portnum_sink($cnt) [$udp_sink assignPort $app_sink($cnt)]
     }
     
     $ipif_sink addr 254
+    $ipr_sink set ipAddr_ [$ipif_sink addr]
 
     set position_sink [new "Position/BM"]
     $node_sink addPosition $position_sink
@@ -320,7 +342,31 @@ proc connectNodes {id1} {
     $app($id1) set destPort_ $portnum_sink($id1)
     $app_sink($id1) set destAddr_ [$ipif($id1) addr]
     $app_sink($id1) set destPort_ $portnum($id1)
+
+    $ipr($id1) set destAddr_ [$ipif_sink addr]
 }
+
+# -------------------------------------------------------------
+# Setup Static Routing Tables
+# -------------------------------------------------------------
+#for {set i 0} {$i < $opt(nn)} {incr i}  {
+    
+#    $ipr($i) addRoute [$ipif_sink addr] [$ipif_sink addr]
+    
+#    if {$i == 0} {
+#        $ipr($i) addRoute [$ipif_sink addr] [$ipif_sink addr]
+#    } else {
+#        set nexthop [expr $i - 1]
+#        $ipr($i) addRoute [$ipif_sink addr] [$ipif($nexthop) addr]
+#    }
+
+#    $ipr_sink addRoute [$ipif($i) addr] [$ipif($i) addr]
+#}
+
+for {set id 0} {$id < $opt(nn)} {incr id}  {
+    $ipr($id) initialize
+}
+$ipr_sink initialize
 
 # Setup flows
 for {set id1 0} {$id1 < $opt(nn)} {incr id1}  {
@@ -330,11 +376,16 @@ for {set id1 0} {$id1 < $opt(nn)} {incr id1}  {
 # Fill ARP tables
 for {set id1 0} {$id1 < $opt(nn)} {incr id1}  {
     for {set id2 0} {$id2 < $opt(nn)} {incr id2}  {
-      $mll($id1) addentry [$ipif($id2) addr] [$mac($id2) addr]
+      $mll($id1) addentry [$ipif($id2) addr] $id2
     }   
-    $mll($id1) addentry [$ipif_sink addr] [ $mac_sink addr]
-    $mll_sink addentry [$ipif($id1) addr] [ $mac($id1) addr]
+    
+    $mll($id1) addentry [$ipif_sink addr] $opt(nn)
+    
+    $mll_sink addentry [$ipif($id1) addr] $id1
+    
+    $mll($id1) addentry 255 255
 }
+$mll_sink addentry 255 255
 
 set sinkX 0.0
 set sinkY 0.0
@@ -381,10 +432,10 @@ $position_sink setZ_ 0.0
 
 puts "NODE_POS: 254 [$position_sink getX_] [$position_sink getY_] [$position_sink getZ_]"
 
-for {set id 0} {$id < $opt(nn)} {incr id}  {
-    $ipr($id) initialize
-}
-$ipr_sink initialize
+#for {set id 0} {$id < $opt(nn)} {incr id}  {
+#    $ipr($id) initialize
+#}
+#$ipr_sink initialize
 
 
 # -------------------------------------------------------------
@@ -421,7 +472,7 @@ puts "=== End of Early Node Initialization Check ==="
 # Set here the timers to start and/or stop modules (optional)
 # e.g., 
 for {set id1 0} {$id1 < $opt(nn)} {incr id1}  {
-    $ns at $opt(starttime)    "$app($id1) start"
+    $ns at 10.0    "$app($id1) start"
     $ns at $opt(stoptime)     "$app($id1) stop"
 }
 
@@ -455,8 +506,12 @@ proc finish {} {
         set app_rcv_pkts         [$app_sink($i) getrecvpkts]
         # XXX
         set app_ftt              [$app_sink($i) getftt]
-        set consumed_energy      [$phy($i) set ConsumedEnergy_]
-
+        if { [catch {set consumed_energy [$phy($i) set ConsumedEnergy_]} err] } {
+            if { [catch {set consumed_energy [$phy($i) getConsumedEnergy]} err2] } {
+                puts "WARNING: Could not read energy for node $i. Errors: '$err' / '$err2'"
+                set consumed_energy 0.0
+            }
+        }
         set sum_app_throughput   [expr $sum_app_throughput + $app_throughput]
         set sum_app_sent_pkts    [expr $sum_app_sent_pkts + $app_sent_pkts]
         set sum_app_rcv_pkts     [expr $sum_app_rcv_pkts + $app_rcv_pkts]
@@ -484,12 +539,12 @@ proc finish {} {
     }
     
     puts "Node Stats"
-    set ackcountnode        [$ipr(0) getackcount]
-    set ackcountsink        [$ipr_sink getackcount]
-    set datacount           [$ipr(0) getdatacount]
-    set forwardcount        [$ipr(0) getforwardedcount]
-    set dropcountretx       [$ipr(0) getdatadropscountmaxretx]
-    set dropcountbuffer     [$ipr(0) getdatadropscountbuffer]
+    #set ackcountnode        [$ipr(0) getackcount]
+    #set ackcountsink        [$ipr_sink getackcount]
+    #set datacount           [$ipr(0) getdatacount]
+    #set forwardcount        [$ipr(0) getforwardedcount]
+    #set dropcountretx       [$ipr(0) getdatadropscountmaxretx]
+    #set dropcountbuffer     [$ipr(0) getdatadropscountbuffer]
     set usefuldata          [expr $sum_app_rcv_pkts * $opt(pktsize)]
 
     puts "Metrics"
@@ -517,11 +572,11 @@ proc finish {} {
     puts "Mean Energy per Node     : $mean_energy J"
     puts "Total Energy used        : $sum_energy J"
 
-    puts "Total GUWMANET ACKs      : [expr $ackcountnode + $ackcountsink]"
-    puts "Total GUWMANET Data Gen  : $datacount"
-    puts "Total Packets Forwarded  : $forwardcount"
-    puts "Buffer Drops             : $dropcountbuffer"
-    puts "Max Retx Drops           : $dropcountretx"
+    #puts "Total GUWMANET ACKs      : [expr $ackcountnode + $ackcountsink]"
+    #puts "Total GUWMANET Data Gen  : $datacount"
+    #puts "Total Packets Forwarded  : $forwardcount"
+    #puts "Buffer Drops             : $dropcountbuffer"
+    #puts "Max Retx Drops           : $dropcountretx"
     puts "Useful bytes received    : $usefuldata"
     
     $ns flush-trace
